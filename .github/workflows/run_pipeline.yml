@@ -1,0 +1,59 @@
+name: Run AI Pipeline
+
+on:
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+  
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Decrypt Existing Data
+        env:
+          DATA_KEY: ${{ secrets.DATA_KEY }}
+        run: bash scripts/decrypt_data.sh
+
+      - name: Run AI Pipeline
+        env:
+          GROQ_API_KEY_1: ${{ secrets.GROQ_API_KEY_1 }}
+          GROQ_API_KEY_2: ${{ secrets.GROQ_API_KEY_2 }}
+          CEREBRAS_API_KEY_1: ${{ secrets.CEREBRAS_API_KEY_1 }}
+        run: |
+          # The orchestrator looks in data/raw/ and appends to data/signals.json
+          python pipeline/orchestrator.py
+
+      - name: Re-encrypt Updated Data
+        env:
+          DATA_KEY: ${{ secrets.DATA_KEY }}
+        run: bash scripts/encrypt_data.sh
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "PE-Screener AI Pipeline"
+          git config --global user.email "bot@pe-screener.local"
+          # Only add the encrypted files, never the plaintext JSON
+          git add data/signals.json.enc data/sbti_targets.json.enc
+          # If there are no changes, this will just gracefully exit
+          git commit -m "🤖 Pipeline Run: Appended new intelligence signals" || echo "No changes to commit"
+          git push
+
+      - name: Upload Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-logs
+          path: logs/
+          retention-days: 14
