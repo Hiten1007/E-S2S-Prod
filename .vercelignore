@@ -1,0 +1,6 @@
+# Hide python files from Vercel so it doesn't try to build a Python API
+pipeline/
+requirements.txt
+logs/
+scratch/
+.github/
