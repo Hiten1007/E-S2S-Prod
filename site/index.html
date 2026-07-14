@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E-S2S | France Decarbonization Intelligence</title>
+<meta name="description" content="Real-time intelligence dashboard for Process Electrification and Industrial Decarbonization signals in France.">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-primary:#F6F8F7;
+  --bg-secondary:#FFFFFF;
+  --bg-card:#FFFFFF;
+
+  --border:#DDE7DF;
+  --border-hover:#3DCD58;
+
+  --text-primary:#1E1E1E;
+  --text-secondary:#4F5B62;
+  --text-muted:#7C878E;
+
+  --accent:#3DCD58;
+  --accent-dark:#2FA84B;
+  --accent-light:#E8F8EC;
+  --accent-glow:rgba(61,205,88,.18);
+
+  --green:#3DCD58;
+  --amber:#F4B400;
+  --rose:#E53935;
+  --cyan:#00A3A3;
+  --violet:#4CAF50;
+  --pink:#7BC67B;
+
+  --radius:12px;
+  --radius-sm:8px;
+}
+body{font-family:'Inter',sans-serif; background:#F6F8F7;;color:var(--text-primary);min-height:100vh;display:flex;overflow-x:hidden}
+.sidebar{width:280px;min-height:100vh; background:#FFFFFF;border-right:1px solid #DDE7DF;;padding:24px 20px;position:fixed;top:0;left:0;overflow-y:auto;z-index:100;display:flex;flex-direction:column;gap:24px}
+.sidebar-brand{display:flex;align-items:center;gap:12px}
+.sidebar-brand .logo{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--cyan));border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:#fff}
+.sidebar-brand h1{font-size:18px;font-weight:700;background:linear-gradient(135deg,#3DCD58,#63D471);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sidebar-brand p{font-size:11px;color:var(--text-muted);margin-top:2px}
+.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat-card{background:rgba(99,102,241,.08);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center}
+.stat-card .num{font-size:22px;font-weight:700;color:var(--accent)}
+.stat-card .label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.search-box{position:relative}
+.search-box input{width:100%;padding:10px 12px 10px 36px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:13px;font-family:inherit;outline:none;transition:border .2s}
+.search-box input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.search-box input::placeholder{color:var(--text-muted)}
+.search-box svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-muted)}
+.filter-group{display:flex;flex-direction:column;gap:8px}
+.filter-group h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);font-weight:600}
+.filter-chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text-secondary);transition:all .2s}
+.chip:hover{border-color:var(--accent);color:var(--text-primary)}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.tab-row{display:flex;gap:4px;background:rgba(255,255,255,.03);border-radius:var(--radius-sm);padding:3px}
+.tab-btn{flex:1;padding:8px;border:none;background:transparent;color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;border-radius:6px;transition:all .2s;font-family:inherit}
+.tab-btn.active{background:var(--accent);color:#fff}
+.main{margin-left:280px;flex:1;padding:32px 36px;min-height:100vh}
+.swimlane{margin-bottom:36px}
+.swimlane-header{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.swimlane-header .dot{width:10px;height:10px;border-radius:50%}
+.swimlane-header h2{font-size:16px;font-weight:700}
+.swimlane-header .count{font-size:12px;color:var(--text-muted);margin-left:auto;background:rgba(255,255,255,.05);padding:3px 10px;border-radius:12px}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px}
+.card{background:var(--bg-card);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:var(--radius);padding:20px;transition:all .3s;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0;transition:opacity .3s}
+.card:hover{border-color:var(--border-hover);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.3)}
+.card:hover::before{opacity:1}
+.card-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.badge{padding:3px 10px;border-radius:12px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.badge-sector{border:1px solid}
+.badge-type{background:rgba(255,255,255,.06);color:var(--text-secondary);border:1px solid rgba(255,255,255,.08)}
+.card-headline{font-size:15px;font-weight:600;line-height:1.4;margin-bottom:10px;color:var(--text-primary)}
+.card-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;font-size:11px;color:var(--text-muted)}
+.card-meta a{color:var(--cyan);text-decoration:none;transition:color .2s;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block}
+.card-meta a:hover{color:var(--accent);text-decoration:underline}
+.card-date{display:inline-flex;align-items:center;gap:4px;color:var(--green);font-weight:500}
+.card-date svg{width:12px;height:12px}
+.expand-toggle{display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--accent);font-size:12px;font-weight:500;cursor:pointer;padding:6px 0;font-family:inherit;transition:color .2s}
+.expand-toggle:hover{color:var(--cyan)}
+.expand-toggle svg{width:14px;height:14px;transition:transform .3s}
+.expand-toggle.open svg{transform:rotate(180deg)}
+.card-desc{max-height:0;overflow:hidden;transition:max-height .4s ease,opacity .3s;opacity:0;font-size:12.5px;line-height:1.7;color:var(--text-secondary)}
+.card-desc.open{max-height:2000px;opacity:1;margin-top:8px}
+.card-desc ul{list-style:none;padding:0}
+.card-desc li{position:relative;padding-left:16px;margin-bottom:6px}
+.card-desc li::before{content:'';position:absolute;left:0;top:8px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.card-desc strong{color:var(--text-primary);font-weight:600}
+.related-section{margin-top:10px;padding-top:8px;border-top:1px solid var(--border)}
+.related-section .label{font-size:10px;color:var(--violet);font-weight:600;text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:4px;margin-bottom:4px}
+.related-section .link{font-size:11px;color:var(--text-muted);padding:2px 0}
+.sector-power{color:var(--cyan);border-color:var(--cyan);background:rgba(6,182,212,.1)}
+.sector-energy{color:var(--amber);border-color:var(--amber);background:rgba(245,158,11,.1)}
+.sector-general{color:var(--violet);border-color:var(--violet);background:rgba(139,92,246,.1)}
+.sector-mobility{color:var(--green);border-color:var(--green);background:rgba(16,185,129,.1)}
+.sector-cpg{color:var(--pink);border-color:var(--pink);background:rgba(236,72,153,.1)}
+.sector-cloud{color:var(--rose);border-color:var(--rose);background:rgba(244,63,94,.1)}
+.sector-mmm{color:#60a5fa;border-color:#60a5fa;background:rgba(96,165,250,.1)}
+.dot-funding{background:var(--green)}.dot-opportunity{background:var(--cyan)}.dot-regulation{background:var(--amber)}.dot-market{background:var(--violet)}.dot-technology{background:var(--rose)}
+.no-results{text-align:center;padding:60px;color:var(--text-muted);font-size:14px}
+/* SBTi Section */
+.sbti-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
+.sbti-stat{background:var(--bg-card);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center}
+.sbti-stat .num{font-size:28px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sbti-stat .label{font-size:11px;color:var(--text-muted);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+.sbti-table-wrap{background:var(--bg-card);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.sbti-table{width:100%;border-collapse:collapse;font-size:13px}
+.sbti-table thead{background:rgba(99,102,241,.1)}
+.sbti-table th{padding:12px 16px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--border)}
+.sbti-table td{padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--text-secondary)}
+.sbti-table tr:hover td{background:rgba(99,102,241,.04)}
+.sbti-table .company{color:var(--text-primary);font-weight:500}
+.sbti-badge{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;display:inline-block}
+.sbti-badge.set{background:rgba(16,185,129,.15);color:var(--green)}
+.sbti-badge.committed{background:rgba(245,158,11,.15);color:var(--amber)}
+.sbti-badge.removed{background:rgba(244,63,94,.15);color:var(--rose)}
+.sbti-badge.temp-15{background:rgba(6,182,212,.15);color:var(--cyan)}
+.sbti-badge.temp-2{background:rgba(139,92,246,.15);color:var(--violet)}
+.sbti-expand{background:none;border:none;color:var(--accent);cursor:pointer;font-size:11px;font-family:inherit;padding:2px 6px}
+.sbti-expand:hover{color:var(--cyan)}
+.sbti-detail{display:none;padding:8px 16px 12px;font-size:12px;line-height:1.6;color:var(--text-muted);background:rgba(0,0,0,.2)}
+.sbti-detail.open{display:table-row}
+.sbti-pagination{display:flex;justify-content:center;align-items:center;gap:8px;padding:16px}
+.sbti-pagination button{padding:6px 14px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--text-secondary);font-size:12px;font-family:inherit;cursor:pointer;transition:all .2s}
+.sbti-pagination button:hover{border-color:var(--accent);color:var(--text-primary)}
+.sbti-pagination button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.sbti-pagination span{color:var(--text-muted);font-size:12px}
+.sbti-search{margin-bottom:20px}
+.sbti-search input{width:100%;max-width:400px;padding:10px 14px 10px 38px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:13px;font-family:inherit;outline:none;transition:border .2s}
+.sbti-search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.sbti-search input::placeholder{color:var(--text-muted)}
+.sbti-filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(99,102,241,.3);border-radius:3px}
+@media(max-width:768px){.sidebar{width:100%;position:relative;min-height:auto}.main{margin-left:0}.card-grid{grid-template-columns:1fr}.sbti-stats{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    
+    <div><h1>ES2S- Signal to Scale</h1><p>Powering Electrification Growth</p></div>
+  </div>
+  <div class="stats-row" id="stats"></div>
+  <div class="tab-row">
+    <button class="tab-btn active" onclick="switchTab('signals')">Signals</button>
+    <button class="tab-btn" onclick="switchTab('sbti')">SBTi Data</button>
+  </div>
+  <div class="search-box">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+    <input type="text" id="search" placeholder="Search headlines..." oninput="applySearch()">
+  </div>
+  <div class="filter-group" id="signalFilters">
+    <h3>Sector</h3>
+    <div class="filter-chips" id="sectorFilters"></div>
+    <h3 style="margin-top:12px">Signal Type</h3>
+    <div class="filter-chips" id="typeFilters"></div>
+    <h3 style="margin-top:12px">Source</h3>
+    <div class="filter-chips" id="sourceFilters"></div>
+  </div>
+  <div class="filter-group" id="sbtiFilters" style="display:none">
+    <h3>Status</h3>
+    <div class="filter-chips" id="sbtiStatusFilters"></div>
+    <h3 style="margin-top:12px">Classification</h3>
+    <div class="filter-chips" id="sbtiClassFilters"></div>
+  </div>
+</aside>
+<main class="main">
+  <div id="signalsView"></div>
+  <div id="sbtiView" style="display:none"></div>
+</main>
+
+<script>
+
+
+/* ===== DATA LOADING ===== */
+let SIGNALS=[];
+let SBTI=[];
+let activeSectors=new Set(),activeTypes=new Set(),activeSources=new Set();
+let sbtiStatusFilter=new Set(),sbtiClassFilter=new Set();
+let currentTab='signals';
+let sbtiPage=1;
+const SBTI_PER_PAGE=25;
+
+function loadData(){
+  Promise.all([
+    fetch('./signals.json').then(r=>r.json()),
+    fetch('./sbti_targets.json').then(r=>r.json())
+  ]).then(([sig,sbti])=>{
+    SIGNALS=sig;SBTI=sbti;
+    renderAll();
+  }).catch(error=>{
+    console.error('Error fetching data:', error);
+    document.getElementById('stats').innerHTML='<p style="color:red">Failed to load data. Check that signals.json and sbti_targets.json are deployed alongside index.html.</p>';
+  });
+}
+
+function renderAll(){renderStats();renderFilters();renderSignals();renderSBTi();}
+
+/* ===== HELPERS ===== */
+function getSectorClass(s){
+  const m={'Power & Grid':'sector-power','Energy & Chemicals':'sector-energy','General':'sector-general','Mobility':'sector-mobility','Consumer Packaged Goods':'sector-cpg','Cloud & Service Providers':'sector-cloud','MMM':'sector-mmm'};
+  return m[s]||'sector-general';
+}
+function getDotClass(t){
+  const m={'Funding':'dot-funding','Opportunity':'dot-opportunity','Regulation':'dot-regulation','Market Signal':'dot-market','Technology':'dot-technology'};
+  return m[t]||'dot-funding';
+}
+function parseDesc(raw){
+  if(!raw)return'';
+  let html=raw.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  const lines=html.split('\n').map(l=>l.trim()).filter(Boolean);
+  let out='<ul>';
+  for(const l of lines){let clean=l.replace(/^[-\u2022*]\s*/,'').replace(/^\d+\.\s*/,'');out+='<li>'+clean+'</li>';}
+  return out+'</ul>';
+}
+
+/* ===== STATS ===== */
+function renderStats(){
+  const el=document.getElementById('stats');
+  if(currentTab==='signals'){
+    const types={};SIGNALS.forEach(s=>{types[s.signal_type]=(types[s.signal_type]||0)+1});
+    el.innerHTML=`
+      <div class="stat-card"><div class="num">${SIGNALS.length}</div><div class="label">Signals</div></div>`;
+  } else {
+    const set=SBTI.filter(s=>s.status==='Targets set').length;
+    const committed=SBTI.filter(s=>s.status==='Committed').length;
+    const t15=SBTI.filter(s=>s.target_classification&&s.target_classification.includes('1.5')).length;
+    el.innerHTML=`
+      <div class="stat-card"><div class="num">${SBTI.length}</div><div class="label">Companies</div></div>
+      <div class="stat-card"><div class="num">${set}</div><div class="label">Targets Set</div></div>
+      <div class="stat-card"><div class="num">${committed}</div><div class="label">Committed</div></div>
+      <div class="stat-card"><div class="num">${t15}</div><div class="label">1.5\u00b0C Aligned</div></div>`;
+  }
+}
+
+/* ===== FILTERS ===== */
+function renderFilters(){
+  if(currentTab==='signals'){
+    const sectors=[...new Set(SIGNALS.map(s=>s.sector))].sort();
+    const types=[...new Set(SIGNALS.map(s=>s.signal_type))].sort();
+    document.getElementById('sectorFilters').innerHTML=sectors.map(s=>`<button class="chip${activeSectors.has(s)?' active':''}" onclick="toggleFilter('sector','${s}')">${s}</button>`).join('');
+    document.getElementById('typeFilters').innerHTML=types.map(t=>`<button class="chip${activeTypes.has(t)?' active':''}" onclick="toggleFilter('type','${t}')">${t}</button>`).join('');
+    const sources=[...new Set(SIGNALS.map(s=>s.source==='LinkedIn Scraper'?'LinkedIn Scraper':'Official News'))].sort();
+    document.getElementById('sourceFilters').innerHTML=sources.map(s=>`<button class="chip${activeSources.has(s)?' active':''}" onclick="toggleFilter('source','${s}')">${s==='LinkedIn Scraper'?'LinkedIn Insights':'Official News'}</button>`).join('');
+  } else {
+    const statuses=[...new Set(SBTI.map(s=>s.status))].sort();
+    const classes=[...new Set(SBTI.map(s=>s.target_classification).filter(Boolean))].sort();
+    document.getElementById('sbtiStatusFilters').innerHTML=statuses.map(s=>`<button class="chip${sbtiStatusFilter.has(s)?' active':''}" onclick="toggleFilter('sbtiStatus','${s}')">${s}</button>`).join('');
+    document.getElementById('sbtiClassFilters').innerHTML=classes.map(c=>`<button class="chip${sbtiClassFilter.has(c)?' active':''}" onclick="toggleFilter('sbtiClass','${c.replace(/'/g,"\\'")}')">${c}</button>`).join('');
+  }
+}
+
+function toggleFilter(kind,val){
+  const map={sector:activeSectors,type:activeTypes,source:activeSources,sbtiStatus:sbtiStatusFilter,sbtiClass:sbtiClassFilter};
+  const set=map[kind];
+  set.has(val)?set.delete(val):set.add(val);
+  renderFilters();
+  if(kind.startsWith('sbti')){sbtiPage=1;renderSBTi();}else renderSignals();
+}
+
+function applySearch(){currentTab==='signals'?renderSignals():renderSBTi();}
+
+/* ===== SIGNALS VIEW ===== */
+function renderSignals(){
+  const q=document.getElementById('search').value.toLowerCase();
+  let filtered=SIGNALS.filter(s=>{
+    if(activeSectors.size&&!activeSectors.has(s.sector))return false;
+    if(activeTypes.size&&!activeTypes.has(s.signal_type))return false;
+    if(activeSources.size){
+      const src=s.source==='LinkedIn Scraper'?'LinkedIn Scraper':'Official News';
+      if(!activeSources.has(src))return false;
+    }
+    if(q&&!s.headline.toLowerCase().includes(q)&&!(s.description||'').toLowerCase().includes(q))return false;
+    return true;
+  });
+  
+  let official = filtered.filter(s => s.source !== 'LinkedIn Scraper');
+  let linkedin = filtered.filter(s => s.source === 'LinkedIn Scraper');
+
+  const groups={};
+  official.forEach(s=>{(groups[s.signal_type]=groups[s.signal_type]||[]).push(s)});
+  
+  const container=document.getElementById('signalsView');
+  if(!filtered.length){container.innerHTML='<div class="no-results">No signals match your filters.</div>';return;}
+  let html='';
+  const order=['Funding','Opportunity','Regulation','Market Signal','Technology'];
+  const sortedKeys=[...new Set([...order.filter(k=>groups[k]),...Object.keys(groups)])];
+  for(const type of sortedKeys){
+    const sigs=groups[type];if(!sigs)continue;
+    html+=`<div class="swimlane">
+      <div class="swimlane-header"><div class="dot ${getDotClass(type)}"></div><h2>${type}</h2><span class="count">${sigs.length} signal${sigs.length>1?'s':''}</span></div>
+      <div class="card-grid">${sigs.map((s,i)=>renderCard(s,type.replace(/\s/g,'')+'_'+i, false)).join('')}</div></div>`;
+  }
+  
+  if(linkedin.length > 0) {
+    html+=`<div class="swimlane" style="margin-top: 40px; padding-top: 20px; border-top: 2px dashed var(--border);">
+      <div class="swimlane-header"><div class="dot" style="background:#0077b5"></div><h2 style="color:#0077b5">LinkedIn Insights</h2><span class="count">${linkedin.length} signal${linkedin.length>1?'s':''}</span></div>
+      <div class="card-grid">${linkedin.map((s,i)=>renderCard(s,'linkedin_'+i, true)).join('')}</div></div>`;
+  }
+  
+  container.innerHTML=html;
+}
+
+function renderCard(s,id, isLinkedin=false){
+  const sectorCls=getSectorClass(s.sector);
+  let rawUrl=s.source_url||(s.source_urls&&s.source_urls[0])||'';
+  let urls = rawUrl ? rawUrl.split(/;|\s|%20/).filter(u => u.trim().startsWith('http')) : [];
+  const url = urls.length > 0 ? urls[0] : rawUrl;
+  let domain = '';
+  if (url && url.startsWith('http')) {
+    try { domain = new URL(url).hostname.replace('www.', ''); } catch(e) { domain = s.source_domain||'Link'; }
+  } else {
+    domain = s.source_domain||'Link';
+  }
+  const dateStr=s.published_date||s.announcement_date;
+  const dateHtml=dateStr?`<span class="card-date"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>${dateStr}</span>`:'';
+  const sourceHtml=url?`<a href="${url}" target="_blank" title="${url}">${domain}</a>`:(domain?`<span>${domain}</span>`:'');
+  let deadlineHtml='';
+  const dm=(s.description||'').match(/deadline[:\s]*(\d{1,2}\s+\w+\s+\d{4}|\d{4}-\d{2}-\d{2})/i)||(s.description||'').match(/submission.*?(\d{1,2}\s+\w+\s+\d{4})/i);
+  if(dm)deadlineHtml=`<span style="color:var(--rose);font-weight:600;font-size:11px">\u23f0 Deadline: ${dm[1]}</span>`;
+  const relatedHtml='';
+  const linkedinBadge = isLinkedin ? `<span class="badge" style="background:rgba(0,119,181,0.2);color:#00a0dc;border:1px solid rgba(0,119,181,0.3);margin-right:6px;">LinkedIn</span>` : '';
+  return`<div class="card">
+    <div class="card-badges">${linkedinBadge}<span class="badge badge-sector ${sectorCls}">${s.sector}</span><span class="badge badge-type">${s.signal_type}</span></div>
+    <div class="card-headline">${s.headline}</div>
+    <div class="card-meta">${dateHtml}${sourceHtml}${deadlineHtml}</div>
+    <button class="expand-toggle" onclick="toggleExpand(this,'${id}')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>Read more</button>
+    <div class="card-desc" id="desc_${id}">
+      ${parseDesc(s.description)}
+      ${urls.length > 1 ? `<div style="margin-top:12px;padding-top:8px;border-top:1px solid var(--border);font-size:12px;"><strong>Other Links:</strong><ul style="margin-top:4px;padding-left:20px;list-style:disc;">${urls.slice(1).map(u => `<li><a href="${u}" target="_blank" style="color:var(--primary);text-decoration:none;word-break:break-all;">${u}</a></li>`).join('')}</ul></div>` : ''}
+    </div>
+    ${relatedHtml}</div>`;
+}
+
+function toggleExpand(btn,id){
+  const d=document.getElementById('desc_'+id);d.classList.toggle('open');btn.classList.toggle('open');
+}
+
+/* ===== SBTi VIEW ===== */
+function renderSBTi(){
+  const q=document.getElementById('search').value.toLowerCase();
+  let filtered=SBTI.filter(s=>{
+    if(sbtiStatusFilter.size&&!sbtiStatusFilter.has(s.status))return false;
+    if(sbtiClassFilter.size&&!sbtiClassFilter.has(s.target_classification))return false;
+    if(q&&!s.company_name.toLowerCase().includes(q)&&!(s.sector||'').toLowerCase().includes(q))return false;
+    return true;
+  });
+  const totalPages=Math.ceil(filtered.length/SBTI_PER_PAGE);
+  const start=(sbtiPage-1)*SBTI_PER_PAGE;
+  const page=filtered.slice(start,start+SBTI_PER_PAGE);
+  const statusBadge=s=>{const c=s==='Targets set'?'set':s==='Committed'?'committed':'removed';return`<span class="sbti-badge ${c}">${s}</span>`};
+  const classBadge=c=>{if(!c||c==='N/A')return'<span style="color:var(--text-muted)">-</span>';const cl=c.includes('1.5')?'temp-15':'temp-2';return`<span class="sbti-badge ${cl}">${c}</span>`};
+
+  let html=`
+    <div class="sbti-stats">
+      <div class="sbti-stat"><div class="num">${SBTI.length}</div><div class="label">Total Companies</div></div>
+      <div class="sbti-stat"><div class="num">${SBTI.filter(s=>s.status==='Targets set').length}</div><div class="label">Targets Set</div></div>
+      <div class="sbti-stat"><div class="num">${SBTI.filter(s=>s.target_classification&&s.target_classification.includes('1.5')).length}</div><div class="label">1.5\u00b0C Aligned</div></div>
+      <div class="sbti-stat"><div class="num">${[...new Set(SBTI.map(s=>s.sector))].length}</div><div class="label">Sectors</div></div>
+    </div>
+    <div style="margin-bottom:12px;color:var(--text-muted);font-size:13px">Showing ${start+1}\u2013${Math.min(start+SBTI_PER_PAGE,filtered.length)} of ${filtered.length} French companies</div>
+    <div class="sbti-table-wrap"><table class="sbti-table"><thead><tr>
+      <th>Company</th><th>Sector</th><th>Status</th><th>Target Year</th><th>Classification</th><th></th>
+    </tr></thead><tbody>`;
+  for(let i=0;i<page.length;i++){
+    const s=page[i];const rid='sbti_'+start+'_'+i;
+    html+=`<tr>
+      <td class="company">${s.company_name}</td>
+      <td>${s.sector||'-'}</td>
+      <td>${statusBadge(s.status)}</td>
+      <td>${s.target_year||'-'}</td>
+      <td>${classBadge(s.target_classification)}</td>
+      <td>${s.target_description&&s.target_description!=='N/A'?`<button class="sbti-expand" onclick="toggleSbtiDetail('${rid}')">\u25bc Details</button>`:''}</td>
+    </tr>`;
+    if(s.target_description&&s.target_description!=='N/A'){
+      html+=`<tr class="sbti-detail" id="${rid}"><td colspan="6" style="padding:12px 20px;font-size:12px;line-height:1.6;color:var(--text-secondary);background:rgba(99,102,241,.03)">${s.target_description}</td></tr>`;
+    }
+  }
+  html+=`</tbody></table></div>`;
+  // Pagination
+  html+=`<div class="sbti-pagination">`;
+  if(sbtiPage>1)html+=`<button onclick="sbtiPage--;renderSBTi()">\u2190 Prev</button>`;
+  const maxBtns=7;let startP=Math.max(1,sbtiPage-3),endP=Math.min(totalPages,startP+maxBtns-1);
+  if(endP-startP<maxBtns-1)startP=Math.max(1,endP-maxBtns+1);
+  for(let p=startP;p<=endP;p++)html+=`<button class="${p===sbtiPage?'active':''}" onclick="sbtiPage=${p};renderSBTi()">${p}</button>`;
+  html+=`<span>of ${totalPages}</span>`;
+  if(sbtiPage<totalPages)html+=`<button onclick="sbtiPage++;renderSBTi()">Next \u2192</button>`;
+  html+=`</div>`;
+  document.getElementById('sbtiView').innerHTML=html;
+}
+
+function toggleSbtiDetail(id){
+  const el=document.getElementById(id);if(el)el.classList.toggle('open');
+  el.style.display=el.classList.contains('open')?'table-row':'none';
+}
+
+/* ===== TAB SWITCHING ===== */
+function switchTab(tab){
+  currentTab=tab;
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===(tab==='signals'?0:1)));
+  document.getElementById('signalsView').style.display=tab==='signals'?'':'none';
+  document.getElementById('sbtiView').style.display=tab==='sbti'?'':'none';
+  document.getElementById('signalFilters').style.display=tab==='signals'?'':'none';
+  document.getElementById('sbtiFilters').style.display=tab==='sbti'?'':'none';
+  document.getElementById('search').placeholder=tab==='signals'?'Search headlines...':'Search companies...';
+  document.getElementById('search').value='';
+  renderStats();renderFilters();
+}
+
+loadData();
+</script>
+</body>
+</html>

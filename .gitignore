@@ -1,0 +1,34 @@
+# ===========================
+# DECRYPTED DATA — NEVER COMMIT
+# ===========================
+data/signals.json
+data/sbti_targets.json
+data/raw/
+
+# ===========================
+# SITE GENERATED DATA
+# ===========================
+site/signals.json
+site/sbti_targets.json
+
+# ===========================
+# SECRETS & ENV
+# ===========================
+.env
+*.env
+
+# ===========================
+# RUNTIME / LOGS
+# ===========================
+logs/*.log
+__pycache__/
+*.pyc
+scratch/
+node_modules/
+
+# ===========================
+# OS JUNK
+# ===========================
+.DS_Store
+Thumbs.db
+*.swp
