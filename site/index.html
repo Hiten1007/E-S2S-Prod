@@ -193,7 +193,7 @@ body{font-family:'Inter',sans-serif; background:#F6F8F7;;color:var(--text-primar
     <div class="filter-chips" id="sectorFilters"></div>
     <h3 style="margin-top:12px">Signal Type</h3>
     <div class="filter-chips" id="typeFilters"></div>
-    <h3 style="margin-top:12px">Source</h3>
+    <h3 style="margin-top:12px">Additional Insights</h3>
     <div class="filter-chips" id="sourceFilters"></div>
     <h3 style="margin-top:12px">Deadline Status</h3>
     <div class="filter-chips" id="deadlineStatusFilters"></div>
@@ -302,8 +302,7 @@ function renderFilters(){
     const types=[...new Set(SIGNALS.map(s=>s.signal_type))].sort();
     document.getElementById('sectorFilters').innerHTML=sectors.map(s=>`<button class="chip${activeSectors.has(s)?' active':''}" onclick="toggleFilter('sector','${s}')">${s}</button>`).join('');
     document.getElementById('typeFilters').innerHTML=types.map(t=>`<button class="chip${activeTypes.has(t)?' active':''}" onclick="toggleFilter('type','${t}')">${t}</button>`).join('');
-    const sources=[...new Set(SIGNALS.map(s=>s.source==='LinkedIn Scraper'?'LinkedIn Scraper':'Official News'))].sort();
-    document.getElementById('sourceFilters').innerHTML=sources.map(s=>`<button class="chip${activeSources.has(s)?' active':''}" onclick="toggleFilter('source','${s}')">${s==='LinkedIn Scraper'?'LinkedIn Insights':'Official News'}</button>`).join('');
+    document.getElementById('sourceFilters').innerHTML=`<button class="chip${activeSources.has('LinkedIn Scraper')?' active':''}" onclick="toggleFilter('source','LinkedIn Scraper')">LinkedIn Insights</button>`;
     const dlStatuses=['live','expired'];
     document.getElementById('deadlineStatusFilters').innerHTML=dlStatuses.map(s=>`<button class="chip${activeDeadlineStatus.has(s)?' active':''}" onclick="toggleFilter('deadlineStatus','${s}')">${s==='live'?'Live Deadline':'Expired'}</button>`).join('');
   } else {
