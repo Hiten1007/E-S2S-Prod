@@ -43,7 +43,8 @@ body{font-family:'Inter',sans-serif; background:#F6F8F7;;color:var(--text-primar
 .sidebar-brand p{font-size:11px;color:var(--text-muted);margin-top:2px}
 .stats-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .stat-card{background:rgba(99,102,241,.08);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center}
-.stat-card .num{font-size:22px;font-weight:700;color:var(--accent)}
+.stat-card .num{font-size:22px;font-weight:700;color:var(--accent);transition:opacity .3s ease}
+.stat-card .num.animating{opacity:0}
 .stat-card .label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
 .search-box{position:relative}
 .search-box input{width:100%;padding:10px 12px 10px 36px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:13px;font-family:inherit;outline:none;transition:border .2s}
@@ -170,10 +171,10 @@ body{font-family:'Inter',sans-serif; background:#F6F8F7;;color:var(--text-primar
   <div class="date-filter-group" id="dateFilterSection">
     <h3>Date Range</h3>
     <div class="date-presets" id="datePresets">
-      <button class="date-preset active" onclick="setDatePreset('3m')">3 Months</button>
+      <button class="date-preset" onclick="setDatePreset('3m')">3 Months</button>
       <button class="date-preset" onclick="setDatePreset('6m')">6 Months</button>
       <button class="date-preset" onclick="setDatePreset('1y')">1 Year</button>
-      <button class="date-preset" onclick="setDatePreset('all')">All Time</button>
+      <button class="date-preset active" onclick="setDatePreset('all')">All Time</button>
     </div>
     <div class="date-custom-row">
       <label>From</label>
@@ -213,7 +214,7 @@ let SBTI=[];
 let activeSectors=new Set(),activeTypes=new Set(),activeSources=new Set();
 let sbtiStatusFilter=new Set(),sbtiClassFilter=new Set();
 let currentTab='signals';
-let activeDatePreset='3m';
+let activeDatePreset='all';
 let customDateFrom='',customDateTo='';
 let sbtiPage=1;
 const SBTI_PER_PAGE=25;
@@ -253,15 +254,29 @@ function parseDesc(raw){
 
 /* ===== STATS ===== */
 let lastFilteredCount=0;
+function animateCounter(el,from,to,duration){
+  const start=performance.now();
+  const step=(ts)=>{
+    const p=Math.min((ts-start)/duration,1);
+    const ease=1-Math.pow(1-p,3);
+    el.textContent=Math.round(from+(to-from)*ease);
+    if(p<1)requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
 function renderStats(filteredCount){
+  const prev=lastFilteredCount;
   if(filteredCount!==undefined)lastFilteredCount=filteredCount;
   const el=document.getElementById('stats');
   if(currentTab==='signals'){
     const fc=lastFilteredCount||SIGNALS.length;
-    const total=SIGNALS.length;
-    const label=fc<total?`${fc} / ${total} Signals`:`${total} Signals`;
+    const numEl=el.querySelector('.num');
+    if(numEl&&prev!==fc){
+      animateCounter(numEl,prev||SIGNALS.length,fc,400);
+      return;
+    }
     el.innerHTML=`
-      <div class="stat-card"><div class="num">${fc}</div><div class="label">${label}</div></div>`;
+      <div class="stat-card"><div class="num">${fc}</div><div class="label">Signals</div></div>`;
   } else {
     const set=SBTI.filter(s=>s.status==='Targets set').length;
     const committed=SBTI.filter(s=>s.status==='Committed').length;
