@@ -102,6 +102,20 @@ body{font-family:'Inter',sans-serif; background:#F6F8F7;;color:var(--text-primar
 .sector-mmm{color:#60a5fa;border-color:#60a5fa;background:rgba(96,165,250,.1)}
 .dot-funding{background:var(--green)}.dot-opportunity{background:var(--cyan)}.dot-regulation{background:var(--amber)}.dot-market{background:var(--violet)}.dot-technology{background:var(--rose)}
 .no-results{text-align:center;padding:60px;color:var(--text-muted);font-size:14px}
+/* Date Filter */
+.date-filter-group{display:flex;flex-direction:column;gap:8px}
+.date-filter-group h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);font-weight:600}
+.date-presets{display:flex;gap:6px;flex-wrap:wrap}
+.date-preset{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text-secondary);transition:all .2s;font-family:inherit}
+.date-preset:hover{border-color:var(--accent);color:var(--text-primary)}
+.date-preset.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.date-custom-row{display:flex;gap:6px;align-items:center;margin-top:4px}
+.date-custom-row label{font-size:10px;color:var(--text-muted);min-width:30px}
+.date-custom-row input[type=date]{flex:1;padding:5px 8px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:11px;font-family:inherit;outline:none;transition:border .2s}
+.date-custom-row input[type=date]:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+/* Deadline Badge */
+.card-deadline{display:inline-flex;align-items:center;gap:4px;color:var(--rose);font-weight:600;font-size:11px;background:rgba(229,57,53,.08);padding:2px 8px;border-radius:10px;border:1px solid rgba(229,57,53,.2)}
+.card-deadline svg{width:12px;height:12px}
 /* SBTi Section */
 .sbti-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
 .sbti-stat{background:var(--bg-card);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center}
@@ -160,6 +174,23 @@ body{font-family:'Inter',sans-serif; background:#F6F8F7;;color:var(--text-primar
     <div class="filter-chips" id="typeFilters"></div>
     <h3 style="margin-top:12px">Source</h3>
     <div class="filter-chips" id="sourceFilters"></div>
+    <div class="date-filter-group" style="margin-top:12px" id="dateFilterSection">
+      <h3>Date Range</h3>
+      <div class="date-presets" id="datePresets">
+        <button class="date-preset active" onclick="setDatePreset('3m')">3 Months</button>
+        <button class="date-preset" onclick="setDatePreset('6m')">6 Months</button>
+        <button class="date-preset" onclick="setDatePreset('1y')">1 Year</button>
+        <button class="date-preset" onclick="setDatePreset('all')">All Time</button>
+      </div>
+      <div class="date-custom-row">
+        <label>From</label>
+        <input type="date" id="dateFrom" onchange="setDatePreset('custom')">
+      </div>
+      <div class="date-custom-row">
+        <label>To</label>
+        <input type="date" id="dateTo" onchange="setDatePreset('custom')">
+      </div>
+    </div>
   </div>
   <div class="filter-group" id="sbtiFilters" style="display:none">
     <h3>Status</h3>
@@ -182,6 +213,8 @@ let SBTI=[];
 let activeSectors=new Set(),activeTypes=new Set(),activeSources=new Set();
 let sbtiStatusFilter=new Set(),sbtiClassFilter=new Set();
 let currentTab='signals';
+let activeDatePreset='3m';
+let customDateFrom='',customDateTo='';
 let sbtiPage=1;
 const SBTI_PER_PAGE=25;
 
@@ -264,6 +297,51 @@ function toggleFilter(kind,val){
 
 function applySearch(){currentTab==='signals'?renderSignals():renderSBTi();}
 
+/* ===== DATE FILTER ===== */
+function getDateRange(){
+  const now=new Date();
+  if(activeDatePreset==='custom'){
+    return{from:customDateFrom||'',to:customDateTo||''};
+  }
+  if(activeDatePreset==='all')return{from:'',to:''};
+  let months=3;
+  if(activeDatePreset==='6m')months=6;
+  if(activeDatePreset==='1y')months=12;
+  const from=new Date(now);
+  from.setMonth(from.getMonth()-months);
+  return{from:from.toISOString().slice(0,10),to:now.toISOString().slice(0,10)};
+}
+
+function setDatePreset(preset){
+  activeDatePreset=preset;
+  if(preset==='custom'){
+    customDateFrom=document.getElementById('dateFrom').value;
+    customDateTo=document.getElementById('dateTo').value;
+  } else {
+    // Update the date inputs to reflect the preset
+    const range=getDateRange();
+    document.getElementById('dateFrom').value=range.from;
+    document.getElementById('dateTo').value=range.to;
+  }
+  // Update active state on preset buttons
+  document.querySelectorAll('.date-preset').forEach(b=>b.classList.remove('active'));
+  const presetMap={'3m':0,'6m':1,'1y':2,'all':3};
+  if(preset in presetMap){
+    document.querySelectorAll('.date-preset')[presetMap[preset]].classList.add('active');
+  }
+  renderSignals();
+}
+
+function passesDateFilter(s){
+  const range=getDateRange();
+  if(!range.from&&!range.to)return true;
+  const d=s.published_date||s.deadline_date||s.announcement_date||'';
+  if(!d||d.length<10)return true; // no valid date, show it anyway
+  if(range.from&&d<range.from)return false;
+  if(range.to&&d>range.to)return false;
+  return true;
+}
+
 /* ===== SIGNALS VIEW ===== */
 function renderSignals(){
   const q=document.getElementById('search').value.toLowerCase();
@@ -274,6 +352,7 @@ function renderSignals(){
       const src=s.source==='LinkedIn Scraper'?'LinkedIn Scraper':'Official News';
       if(!activeSources.has(src))return false;
     }
+    if(!passesDateFilter(s))return false;
     if(q&&!s.headline.toLowerCase().includes(q)&&!(s.description||'').toLowerCase().includes(q))return false;
     return true;
   });
@@ -320,8 +399,12 @@ function renderCard(s,id, isLinkedin=false){
   const dateHtml=dateStr?`<span class="card-date"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>${dateStr}</span>`:'';
   const sourceHtml=url?`<a href="${url}" target="_blank" title="${url}">${domain}</a>`:(domain?`<span>${domain}</span>`:'');
   let deadlineHtml='';
-  const dm=(s.description||'').match(/deadline[:\s]*(\d{1,2}\s+\w+\s+\d{4}|\d{4}-\d{2}-\d{2})/i)||(s.description||'').match(/submission.*?(\d{1,2}\s+\w+\s+\d{4})/i);
-  if(dm)deadlineHtml=`<span style="color:var(--rose);font-weight:600;font-size:11px">\u23f0 Deadline: ${dm[1]}</span>`;
+  if(s.deadline_date){
+    deadlineHtml=`<span class="card-deadline"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Deadline: ${s.deadline_date}</span>`;
+  } else {
+    const dm=(s.description||'').match(/deadline[:\s]*(\d{1,2}\s+\w+\s+\d{4}|\d{4}-\d{2}-\d{2})/i)||(s.description||'').match(/submission.*?(\d{1,2}\s+\w+\s+\d{4})/i);
+    if(dm)deadlineHtml=`<span class="card-deadline"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Deadline: ${dm[1]}</span>`;
+  }
   const relatedHtml='';
   const linkedinBadge = isLinkedin ? `<span class="badge" style="background:rgba(0,119,181,0.2);color:#00a0dc;border:1px solid rgba(0,119,181,0.3);margin-right:6px;">LinkedIn</span>` : '';
   return`<div class="card">
@@ -412,6 +495,12 @@ function switchTab(tab){
 }
 
 loadData();
+// Initialize date inputs after load
+window.addEventListener('DOMContentLoaded',()=>{
+  const range=getDateRange();
+  document.getElementById('dateFrom').value=range.from;
+  document.getElementById('dateTo').value=range.to;
+});
 </script>
 </body>
 </html>
