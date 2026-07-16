@@ -118,6 +118,7 @@ body{font-family:'Inter',sans-serif; background:#F6F8F7;;color:var(--text-primar
 .date-custom-row input[type=date]:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
 /* Deadline Badge */
 .card-deadline{display:inline-flex;align-items:center;gap:4px;color:var(--rose);font-weight:600;font-size:11px;background:rgba(229,57,53,.08);padding:2px 8px;border-radius:10px;border:1px solid rgba(229,57,53,.2)}
+.card-deadline.expired{color:var(--text-muted);background:rgba(150,150,150,.1);border-color:rgba(150,150,150,.25)}
 .card-deadline svg{width:12px;height:12px}
 /* SBTi Section */
 .sbti-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
@@ -194,6 +195,8 @@ body{font-family:'Inter',sans-serif; background:#F6F8F7;;color:var(--text-primar
     <div class="filter-chips" id="typeFilters"></div>
     <h3 style="margin-top:12px">Source</h3>
     <div class="filter-chips" id="sourceFilters"></div>
+    <h3 style="margin-top:12px">Deadline Status</h3>
+    <div class="filter-chips" id="deadlineStatusFilters"></div>
   </div>
   <div class="filter-group" id="sbtiFilters" style="display:none">
     <h3>Status</h3>
@@ -213,7 +216,7 @@ body{font-family:'Inter',sans-serif; background:#F6F8F7;;color:var(--text-primar
 /* ===== DATA LOADING ===== */
 let SIGNALS=[];
 let SBTI=[];
-let activeSectors=new Set(),activeTypes=new Set(),activeSources=new Set();
+let activeSectors=new Set(),activeTypes=new Set(),activeSources=new Set(),activeDeadlineStatus=new Set();
 let sbtiStatusFilter=new Set(),sbtiClassFilter=new Set();
 let currentTab='signals';
 let activeDatePreset='all';
@@ -301,6 +304,8 @@ function renderFilters(){
     document.getElementById('typeFilters').innerHTML=types.map(t=>`<button class="chip${activeTypes.has(t)?' active':''}" onclick="toggleFilter('type','${t}')">${t}</button>`).join('');
     const sources=[...new Set(SIGNALS.map(s=>s.source==='LinkedIn Scraper'?'LinkedIn Scraper':'Official News'))].sort();
     document.getElementById('sourceFilters').innerHTML=sources.map(s=>`<button class="chip${activeSources.has(s)?' active':''}" onclick="toggleFilter('source','${s}')">${s==='LinkedIn Scraper'?'LinkedIn Insights':'Official News'}</button>`).join('');
+    const dlStatuses=['live','expired'];
+    document.getElementById('deadlineStatusFilters').innerHTML=dlStatuses.map(s=>`<button class="chip${activeDeadlineStatus.has(s)?' active':''}" onclick="toggleFilter('deadlineStatus','${s}')">${s==='live'?'Live Deadline':'Expired'}</button>`).join('');
   } else {
     const statuses=[...new Set(SBTI.map(s=>s.status))].sort();
     const classes=[...new Set(SBTI.map(s=>s.target_classification).filter(Boolean))].sort();
@@ -310,7 +315,7 @@ function renderFilters(){
 }
 
 function toggleFilter(kind,val){
-  const map={sector:activeSectors,type:activeTypes,source:activeSources,sbtiStatus:sbtiStatusFilter,sbtiClass:sbtiClassFilter};
+  const map={sector:activeSectors,type:activeTypes,source:activeSources,deadlineStatus:activeDeadlineStatus,sbtiStatus:sbtiStatusFilter,sbtiClass:sbtiClassFilter};
   const set=map[kind];
   set.has(val)?set.delete(val):set.add(val);
   renderFilters();
@@ -375,6 +380,10 @@ function getFilteredSignals(){
       if(!activeSources.has(src))return false;
     }
     if(!passesDateFilter(s))return false;
+    if(activeDeadlineStatus.size){
+      const ds=s.deadline_status||'none';
+      if(!activeDeadlineStatus.has(ds))return false;
+    }
     if(q&&!s.headline.toLowerCase().includes(q)&&!(s.description||'').toLowerCase().includes(q))return false;
     return true;
   });
@@ -430,7 +439,12 @@ function renderCard(s,id, isLinkedin=false){
   const sourceHtml=url?`<a href="${url}" target="_blank" title="${url}">${domain}</a>`:(domain?`<span>${domain}</span>`:'');
   let deadlineHtml='';
   if(s.deadline_date){
-    deadlineHtml=`<span class="card-deadline"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Deadline: ${s.deadline_date}</span>`;
+    const isExpired=s.deadline_status==='expired';
+    if(isExpired){
+      deadlineHtml=`<span class="card-deadline expired"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Expired</span>`;
+    } else {
+      deadlineHtml=`<span class="card-deadline"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Deadline: ${s.deadline_date}</span>`;
+    }
   } else {
     const dm=(s.description||'').match(/deadline[:\s]*(\d{1,2}\s+\w+\s+\d{4}|\d{4}-\d{2}-\d{2})/i)||(s.description||'').match(/submission.*?(\d{1,2}\s+\w+\s+\d{4})/i);
     if(dm)deadlineHtml=`<span class="card-deadline"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Deadline: ${dm[1]}</span>`;
