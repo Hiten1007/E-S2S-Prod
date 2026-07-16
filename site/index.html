@@ -103,6 +103,8 @@ body{font-family:'Inter',sans-serif; background:#F6F8F7;;color:var(--text-primar
 .sector-mmm{color:#60a5fa;border-color:#60a5fa;background:rgba(96,165,250,.1)}
 .dot-funding{background:var(--green)}.dot-opportunity{background:var(--cyan)}.dot-regulation{background:var(--amber)}.dot-market{background:var(--violet)}.dot-technology{background:var(--rose)}
 .no-results{text-align:center;padding:60px;color:var(--text-muted);font-size:14px}
+#signalsView{transition:opacity .25s ease;opacity:1}
+#signalsView.fading{opacity:0}
 /* Date Filter */
 .date-filter-group{display:flex;flex-direction:column;gap:8px}
 .date-filter-group h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);font-weight:600}
@@ -255,10 +257,11 @@ function parseDesc(raw){
 /* ===== STATS ===== */
 let lastFilteredCount=0;
 function animateCounter(el,from,to,duration){
+  if(from===to)return;
   const start=performance.now();
   const step=(ts)=>{
     const p=Math.min((ts-start)/duration,1);
-    const ease=1-Math.pow(1-p,3);
+    const ease=p<0.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2;
     el.textContent=Math.round(from+(to-from)*ease);
     if(p<1)requestAnimationFrame(step);
   };
@@ -272,7 +275,7 @@ function renderStats(filteredCount){
     const fc=lastFilteredCount||SIGNALS.length;
     const numEl=el.querySelector('.num');
     if(numEl&&prev!==fc){
-      animateCounter(numEl,prev||SIGNALS.length,fc,400);
+      animateCounter(numEl,prev||SIGNALS.length,fc,600);
       return;
     }
     el.innerHTML=`
@@ -379,6 +382,9 @@ function getFilteredSignals(){
 function renderSignals(){
   let filtered=getFilteredSignals();
   renderStats(filtered.length);
+  const container=document.getElementById('signalsView');
+  container.classList.add('fading');
+  setTimeout(()=>{
   
   let official = filtered.filter(s => s.source !== 'LinkedIn Scraper');
   let linkedin = filtered.filter(s => s.source === 'LinkedIn Scraper');
@@ -386,8 +392,7 @@ function renderSignals(){
   const groups={};
   official.forEach(s=>{(groups[s.signal_type]=groups[s.signal_type]||[]).push(s)});
   
-  const container=document.getElementById('signalsView');
-  if(!filtered.length){container.innerHTML='<div class="no-results">No signals match your filters.</div>';return;}
+  if(!filtered.length){container.innerHTML='<div class="no-results">No signals match your filters.</div>';container.classList.remove('fading');return;}
   let html='';
   const order=['Funding','Opportunity','Regulation','Market Signal','Technology'];
   const sortedKeys=[...new Set([...order.filter(k=>groups[k]),...Object.keys(groups)])];
@@ -405,6 +410,8 @@ function renderSignals(){
   }
   
   container.innerHTML=html;
+  requestAnimationFrame(()=>container.classList.remove('fading'));
+  },200);
 }
 
 function renderCard(s,id, isLinkedin=false){
