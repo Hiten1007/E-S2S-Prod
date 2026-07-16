@@ -36,7 +36,7 @@
   --radius-sm:8px;
 }
 body{font-family:'Inter',sans-serif; background:#F6F8F7;;color:var(--text-primary);min-height:100vh;display:flex;overflow-x:hidden}
-.sidebar{width:280px;min-height:100vh; background:#FFFFFF;border-right:1px solid #DDE7DF;;padding:24px 20px;position:fixed;top:0;left:0;overflow-y:auto;z-index:100;display:flex;flex-direction:column;gap:24px}
+.sidebar{width:280px;height:100vh; background:#FFFFFF;border-right:1px solid #DDE7DF;padding:24px 20px;position:fixed;top:0;left:0;overflow-y:auto;z-index:100;display:flex;flex-direction:column;gap:24px}
 .sidebar-brand{display:flex;align-items:center;gap:12px}
 .sidebar-brand .logo{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--cyan));border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:#fff}
 .sidebar-brand h1{font-size:18px;font-weight:700;background:linear-gradient(135deg,#3DCD58,#63D471);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
@@ -167,6 +167,23 @@ body{font-family:'Inter',sans-serif; background:#F6F8F7;;color:var(--text-primar
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
     <input type="text" id="search" placeholder="Search headlines..." oninput="applySearch()">
   </div>
+  <div class="date-filter-group" id="dateFilterSection">
+    <h3>Date Range</h3>
+    <div class="date-presets" id="datePresets">
+      <button class="date-preset active" onclick="setDatePreset('3m')">3 Months</button>
+      <button class="date-preset" onclick="setDatePreset('6m')">6 Months</button>
+      <button class="date-preset" onclick="setDatePreset('1y')">1 Year</button>
+      <button class="date-preset" onclick="setDatePreset('all')">All Time</button>
+    </div>
+    <div class="date-custom-row">
+      <label>From</label>
+      <input type="date" id="dateFrom" onchange="setDatePreset('custom')">
+    </div>
+    <div class="date-custom-row">
+      <label>To</label>
+      <input type="date" id="dateTo" onchange="setDatePreset('custom')">
+    </div>
+  </div>
   <div class="filter-group" id="signalFilters">
     <h3>Sector</h3>
     <div class="filter-chips" id="sectorFilters"></div>
@@ -174,23 +191,6 @@ body{font-family:'Inter',sans-serif; background:#F6F8F7;;color:var(--text-primar
     <div class="filter-chips" id="typeFilters"></div>
     <h3 style="margin-top:12px">Source</h3>
     <div class="filter-chips" id="sourceFilters"></div>
-    <div class="date-filter-group" style="margin-top:12px" id="dateFilterSection">
-      <h3>Date Range</h3>
-      <div class="date-presets" id="datePresets">
-        <button class="date-preset active" onclick="setDatePreset('3m')">3 Months</button>
-        <button class="date-preset" onclick="setDatePreset('6m')">6 Months</button>
-        <button class="date-preset" onclick="setDatePreset('1y')">1 Year</button>
-        <button class="date-preset" onclick="setDatePreset('all')">All Time</button>
-      </div>
-      <div class="date-custom-row">
-        <label>From</label>
-        <input type="date" id="dateFrom" onchange="setDatePreset('custom')">
-      </div>
-      <div class="date-custom-row">
-        <label>To</label>
-        <input type="date" id="dateTo" onchange="setDatePreset('custom')">
-      </div>
-    </div>
   </div>
   <div class="filter-group" id="sbtiFilters" style="display:none">
     <h3>Status</h3>
@@ -252,12 +252,16 @@ function parseDesc(raw){
 }
 
 /* ===== STATS ===== */
-function renderStats(){
+let lastFilteredCount=0;
+function renderStats(filteredCount){
+  if(filteredCount!==undefined)lastFilteredCount=filteredCount;
   const el=document.getElementById('stats');
   if(currentTab==='signals'){
-    const types={};SIGNALS.forEach(s=>{types[s.signal_type]=(types[s.signal_type]||0)+1});
+    const fc=lastFilteredCount||SIGNALS.length;
+    const total=SIGNALS.length;
+    const label=fc<total?`${fc} / ${total} Signals`:`${total} Signals`;
     el.innerHTML=`
-      <div class="stat-card"><div class="num">${SIGNALS.length}</div><div class="label">Signals</div></div>`;
+      <div class="stat-card"><div class="num">${fc}</div><div class="label">${label}</div></div>`;
   } else {
     const set=SBTI.filter(s=>s.status==='Targets set').length;
     const committed=SBTI.filter(s=>s.status==='Committed').length;
@@ -343,9 +347,9 @@ function passesDateFilter(s){
 }
 
 /* ===== SIGNALS VIEW ===== */
-function renderSignals(){
+function getFilteredSignals(){
   const q=document.getElementById('search').value.toLowerCase();
-  let filtered=SIGNALS.filter(s=>{
+  return SIGNALS.filter(s=>{
     if(activeSectors.size&&!activeSectors.has(s.sector))return false;
     if(activeTypes.size&&!activeTypes.has(s.signal_type))return false;
     if(activeSources.size){
@@ -356,6 +360,10 @@ function renderSignals(){
     if(q&&!s.headline.toLowerCase().includes(q)&&!(s.description||'').toLowerCase().includes(q))return false;
     return true;
   });
+}
+function renderSignals(){
+  let filtered=getFilteredSignals();
+  renderStats(filtered.length);
   
   let official = filtered.filter(s => s.source !== 'LinkedIn Scraper');
   let linkedin = filtered.filter(s => s.source === 'LinkedIn Scraper');
