@@ -1,0 +1,43 @@
+name: Test Azure OIDC Access
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: 
+
+permissions:
+  id-token: write 
+  contents: read  
+
+jobs:
+  investigate_access:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # STEP 1: Log in securely using GitHub Secrets
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+
+      # STEP 2: Run diagnostic commands
+      - name: Check Azure Permissions
+        uses: azure/cli@v2
+        env:
+          CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }} # Passed securely to the bash script
+        with:
+          inlineScript: |
+            echo "=== 1. WHAT SUBSCRIPTIONS CAN I SEE? ==="
+            az account list --output table
+            
+            echo ""
+            echo "=== 2. WHAT RESOURCE GROUPS CAN I SEE? ==="
+            az group list --output table || echo "No resource groups found or no permission to view them."
+
+            echo ""
+            echo "=== 3. WHAT EXACT PERMISSIONS (ROLES) DO I HAVE? ==="
+            az role assignment list --assignee $CLIENT_ID --all --output table || echo "Does not have permission to read IAM roles."
